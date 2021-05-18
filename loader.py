@@ -1,0 +1,129 @@
+from torch.utils.data import DataLoader, Subset, Dataset
+from typing import Tuple, List, Union, Dict, NamedTuple, Callable
+from pathlib import Path
+import torch
+from torchvision.transforms import transforms as TF
+from PIL import Image
+import numpy as np
+
+IM_SHAPE = 90
+
+
+class PreprocessedImageDataset(Dataset):
+    def __init__(self, root, uses=1, im_shape: int = 90):
+        super().__init__()
+
+        self.uses = uses
+        self.paths = self.image_paths(Path(root))
+        self.transforms = TF.Compose([
+            TF.Resize(size=im_shape),
+            TF.CenterCrop(size=(im_shape, im_shape)),
+            TF.ToTensor(),
+            TF.Normalize([0.4848], [0.1883])  # TODO: compute actual values of TRAIN Set
+        ])
+
+    def __getitem__(self, item):
+        # compute transforms of single image
+        # returns tuple of tensors of shape (90, 90), (90, 90), 0-d tensor dependent on border size
+        self.image = self.transforms(Image.open(self.paths[item]))
+        self.input, self.known_mask, self.target = GetInOut(self.image)
+        return self.input, self.known_mask, self.target
+
+    def __len__(self):
+        return len(self.paths)
+
+    def image_paths(self, root):
+        """
+        Recursively get all images in root as list
+        """
+        paths = list(root.rglob('*.jpg')) * self.uses
+        return paths
+
+
+def crop(image_array: torch.Tensor, border_x: tuple, border_y: tuple):
+    """
+    essentially ex4 without error handling and with tensors
+    """
+    input_array = image_array.clone()  # create copy of image
+    # set values out of border to 0
+    input_array[:, :border_x[0], :] = 0
+    input_array[:, -border_x[1]:, :] = 0
+    input_array[:, :, :border_y[0]] = 0
+    input_array[:, :, -border_y[1]:] = 0
+
+    known_array = input_array.clone()  # create copy of image with black borders
+    # Set remaining values, i.e. those inside of borders, to 1
+    known_array[border_x[0]:(known_array.shape[0] - border_x[1]),
+    border_y[0]:(known_array.shape[1] - border_y[1])] = True
+
+    # Create mask of same shape as input array, but without black pixels
+    # known = np.empty((image_array.shape[0] - sum(border_x), image_array.shape[1] - sum(border_y)))
+
+    # create array where 1's == border, else 0
+    boolean_border = np.invert(np.array(input_array, dtype=np.bool))
+    # if any value inside the border is 0 (input pixel value in border is 0)
+    boolean_border[border_x[0]:(known_array.shape[0] - border_x[1]),
+    border_y[0]:(known_array.shape[1] - border_y[1])] = False
+    boolean_border = torch.from_numpy(boolean_border)  # convert to tensor
+    target_array = image_array[boolean_border]  # now usable with tensor
+    return input_array, boolean_border, target_array
+
+
+def GetInOut(image, border_x=None, border_y=None):
+    """
+    Gets input, known mask, and outputs from preprocessed image.
+    If no border is specified, randomly create border values --> Train
+    If border is specified, use this border --> Test
+    """
+    if border_y is None:
+        border_y = np.random.randint(5, 15, 2).astype(int)
+    if border_x is None:
+        border_x = np.random.randint(5, 15, 2).astype(int)
+    return crop(image, border_x=border_x, border_y=border_y)
+
+
+def train_test_split(dataset: Dataset, train: float = 0.8, val: float = 0.1, test: float = 0.1, seed: int = 0):
+    if not (0.999 <= train + val + test <= 1.001):
+        raise ValueError(f'train ({train}), val ({val}) and test ({test}) '
+                         f'do not sum up to 1: {train + val + test}!')
+
+    n = len(dataset)
+    n_train, n_val = int(n * train), int(n * val)
+    n_test = n - (n_train + n_val)
+    torch.manual_seed(seed)
+    return torch.utils.data.random_split(dataset, (n_train, n_val, n_test))
+
+
+ds = PreprocessedImageDataset(r'C:\Users\Markus\AI\dataset\dataset', im_shape=90)
+
+loader = DataLoader(ds,
+                    batch_size=10,
+                    num_workers=0,
+                    shuffle=False)
+
+
+def image_collate_fn(image_batch: list, n_feature_channels: int = 1):
+    #
+    # Handle sequences
+    #
+    # Get sequence entries, which are at index 0 in each sample tuple
+    images = [sample for sample in image_batch]
+    # Get the maximum number of height and width of image
+    max_X = np.max([image[0][0].shape[0] for image in images])
+    max_Y = np.max([image[0][0].shape[1] for image in images])
+    max_target = np.max([image[2].shape for image in images])
+    # Allocate a tensor that can fit all padded sequences
+    n_feature_channels = 1  # Could be hard-coded to 3
+    stacked_images_input = torch.zeros(size=(len(images), n_feature_channels,
+                                       max_X, max_Y), dtype=torch.float32)
+    stacked_images_mask = stacked_images_input.clone()
+    # only if all targets should have equal size:
+    # stacked_images_target = torch.zeros(size=(len(images), n_feature_channels, max_target), dtype=torch.float32)
+    stacked_images_target = []  #
+    # Write the sequences into the tensor stacked_sequences
+    for i, image in enumerate(images):
+        stacked_images_input[i, 0, :image[0][0][i].shape.numel(), :image[1][0][i].shape.numel()] = image[0]
+        stacked_images_mask[i, 0, :image[1][0][i].shape.numel(), :image[1][0][i].shape.numel()] = image[1]
+        # stacked_images_target[i, 0, :image[2].shape.numel()] = image[2]  # only if all targets should have equal size
+        stacked_images_target.append(image[2])
+    return stacked_images_input, stacked_images_mask.bool(), stacked_images_target
