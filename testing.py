@@ -57,10 +57,10 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\models\model_20_20210519-112142.pt'
+    model_path = r'C:\Users\Markus\Desktop\results\models\model_20_20210519-145431.pt'
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
-                   r'2\Assignment 02\supplements_ex5\project\v2\example_testset.pkl '
+                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
-                  r'2\Assignment 02\supplements_ex5\project\v2\working_config.json '
+                  r'2\Assignment 02\supplements_ex5\project\v2\python2-project\working_config.json '
     save_pkl_path = r'C:\Users\Markus\Desktop\results\save.pkl'
     main(model_path, samples_path, config_path, save_pkl_path)

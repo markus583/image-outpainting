@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-def _eval(loader: DataLoader, model: nn.Module, optimizer: Optional[Optimizer] = None) -> float:
+def _eval(loader: DataLoader, model: nn.Module, optimizer: Optional[Optimizer] = None, scheduler=None) -> float:
     """
     General purpose evaluation function
     Parameters
@@ -45,11 +45,13 @@ def _eval(loader: DataLoader, model: nn.Module, optimizer: Optional[Optimizer] =
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                if scheduler:
+                    scheduler.step()
             total_loss += loss.detach().cpu().item()
     return total_loss / len(loader)
 
 
-def train_eval(train_loader: DataLoader, model: nn.Module, optimizer: Optimizer) -> float:
+def train_eval(train_loader: DataLoader, model: nn.Module, optimizer: Optimizer, scheduler) -> float:
     """
     Evaluate model during training
     Parameters
@@ -67,7 +69,7 @@ def train_eval(train_loader: DataLoader, model: nn.Module, optimizer: Optimizer)
     """
     assert optimizer is not None
     model.train()
-    return _eval(train_loader, model, optimizer)
+    return _eval(train_loader, model, optimizer, scheduler)
 
 
 def test_eval(test_loader: DataLoader, model: nn.Module):

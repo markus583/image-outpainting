@@ -113,7 +113,6 @@ def image_collate_fn(image_batch: list, n_feature_channels: int = 1):
     max_Y = np.max([image[0][0].shape[1] for image in images])
     max_target = np.max([image[2].shape for image in images])
     # Allocate a tensor that can fit all padded sequences
-    n_feature_channels = 1  # Could be hard-coded to 3
     stacked_images_input = torch.zeros(size=(len(images), n_feature_channels,
                                        max_X, max_Y), dtype=torch.float32)
     stacked_images_mask = stacked_images_input.clone()
