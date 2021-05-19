@@ -16,6 +16,7 @@ import numpy as np
 
 # current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # TODO: tensorboard
+# TODO: better logging - csv of preds, losses
 # TODO: un normalize where needed. Done?
 # TODO: testing
 # TODO: fix data leakage
@@ -23,6 +24,7 @@ import numpy as np
 # TODO: data augmentation
 # TODO: save best model, not only last model
 # TODO: save model if keyboard interrupt/other error
+# TODO: use AdamW, change hyperparams?
 
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
                   writer: SummaryWriter, path):
@@ -66,7 +68,7 @@ def _setup_out_path(result_path: Union[str, Path]) -> Tuple[Path, Path, Path]:
     result_path.mkdir(exist_ok=True)
 
     tb_path = result_path / 'tensorboard'
-    shutil.rmtree(tb_path, ignore_errors=True)
+    # shutil.rmtree(tb_path, ignore_errors=True)
     tb_path.mkdir(exist_ok=True)
 
     model_path = result_path / 'models'
@@ -127,7 +129,8 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         print(f'val/loss: {val_loss}')
         writer.add_scalar(tag='val/loss', scalar_value=val_loss, global_step=epoch)
 
-        if epoch % plotting_interval == 0:
+        # plot every x times and after last epoch
+        if epoch % plotting_interval == 0 or epoch == n_epochs-1:
             _plot_samples(epoch, model, sample_input, sample_mask, sample_targets, writer, results)
 
     print('Best model evaluation...')

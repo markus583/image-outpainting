@@ -57,7 +57,7 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\models\model_5_20210519-102707.pt'
+    model_path = r'C:\Users\Markus\Desktop\results\models\model_20_20210519-112142.pt'
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                    r'2\Assignment 02\supplements_ex5\project\v2\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
