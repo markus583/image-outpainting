@@ -14,14 +14,19 @@ from utils import load_config, plot
 import numpy as np
 
 
+# current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # TODO: tensorboard
-# TODO: un normalize where needed. Done??
+# TODO: un normalize where needed. Done?
 # TODO: testing
-# TODO: test on provided dataset
 # TODO: fix data leakage
+# TODO: feed additional input into NN
+# TODO: data augmentation
+# TODO: save best model, not only last model
+# TODO: save model if keyboard interrupt/other error
 
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
                   writer: SummaryWriter, path):
+    print('Plotting samples...')
     model.eval()
     sample_batch = sample_batch.to('cuda:0')
     output = model(sample_batch)
@@ -138,7 +143,7 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
 
 if __name__ == '__main__':
     results = r'C:\Users\Markus\Desktop\results'
-    main(r'C:\Users\Markus\AI\dataset\dataset\data_part_1\000',
+    main(r'C:\Users\Markus\AI\dataset\dataset\data_part_1',
          r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment '
-         r'02\supplements_ex5\project\v2\working_config.json',
+         r'02\supplements_ex5\project\v2\python2-project\working_config.json',
          results)

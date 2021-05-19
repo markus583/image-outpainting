@@ -11,7 +11,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from loader import *
 from architectures import SimpleCNN
-from utils import load_config, load_pkl, save_pkl
+from utils import load_config, load_pkl, save_pkl, plot
+from scoring import scoring
 
 
 def main(model_path: Union[str, Path], samples_path: Union[str, Path],
@@ -39,24 +40,27 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
                 TF.Normalize([0.4848], [0.1883])  # TODO: compute actual values of TRAIN Set
             ])
             input = transforms(input_array)  # normalized, but borders too! --> borders != 0
-            masked_input = np.where(known_array, inp.detach().cpu().numpy(), 0)  # so that borders are also 0
+            masked_input = np.where(known_array, input.detach().cpu().numpy(), 0)  # so that borders are also 0
             masked_input = torch.from_numpy(masked_input).cuda()
             output = model(masked_input.unsqueeze(0))  # get outputs
             prediction = output[0, 0][~known_array.astype(np.bool)]  # and border of outputs
             prediction = (prediction * 0.1883 + 0.4848) * 255  # un-normalize border/target outputs
-            # TODO: try/compare with sample submissions/scoring function. P1!
             predictions.append((prediction.detach().cpu().numpy().astype(np.uint8)))
-            masks.append(bool_mask.detach().cpu().numpy())
+            # masks.append(bool_mask.detach().cpu().numpy())
 
     save_pkl(pkl_path, predictions)
-    _plot_predicted(images, predictions, masks, SummaryWriter(log_dir=str(tb_path)))
+    # plot(images, predictions, masks, SummaryWriter(log_dir=str(tb_path)))  # TODO: plot, sometimes at least
+    true_target_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
+                       r'2\Assignment ' \
+                       r'02\supplements_ex5\project\v2\python2-project\example_submission_perfect.pkl'
+    print(scoring(pkl_path, true_target_path))
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\models\model_5_20210518-201948.pt'
+    model_path = r'C:\Users\Markus\Desktop\results\models\model_5_20210519-102707.pt'
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                    r'2\Assignment 02\supplements_ex5\project\v2\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                   r'2\Assignment 02\supplements_ex5\project\v2\working_config.json '
-    save_path = r'C:\Users\Markus\Desktop\results'
-    main(model_path, samples_path, config_path, save_path)
+    save_pkl_path = r'C:\Users\Markus\Desktop\results\save.pkl'
+    main(model_path, samples_path, config_path, save_pkl_path)
