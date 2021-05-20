@@ -2,6 +2,8 @@ from loader import *
 from architectures import SimpleCNN
 from utils import load_config, load_pkl, save_pkl, plot
 from scoring import scoring
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 
 def main(model_path: Union[str, Path], samples_path: Union[str, Path],
@@ -25,9 +27,9 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
         for i, (input_array, known_array, border_x, border_y, ID) in enumerate(
                 zip(input_arrays, known_arrays, borders_x, borders_y, ids)):
             # normalize sample
-            transforms = TF.Compose([
-                TF.ToTensor(),
-                TF.Normalize([0.4848], [0.1883])  # TODO: compute actual values of TRAIN Set
+            transforms = A.Compose([
+                A.Normalize([0.48645], [0.2054]),
+                A.ToTensorV2(),
             ])
 
             _input = transforms(input_array)  # normalized, but borders too! --> borders != 0
@@ -37,7 +39,7 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
             # get outputs
             output = model(masked_input.unsqueeze(0))
             prediction = output[0, 0][~known_array.astype(np.bool)]  # and border of outputs
-            prediction = (prediction * 0.1883 + 0.4848) * 255  # un-normalize border/target outputs
+            prediction = (prediction * 0.2054 + 0.48645) * 255  # un-normalize border/target outputs
             # append to list of predictions
             predictions.append((prediction.detach().cpu().numpy().astype(np.uint8)))
             # masks.append(bool_mask.detach().cpu().numpy())

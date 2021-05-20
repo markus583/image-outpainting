@@ -6,7 +6,7 @@ import torch
 
 
 class SimpleCNN(torch.nn.Module):
-    def __init__(self, n_in_channels: int = 1, n_hidden_layers: int = 3, n_kernels: int = 32, kernel_size: int = 7):
+    def __init__(self, n_in_channels: int = 2, n_hidden_layers: int = 3, n_kernels: int = 32, kernel_size: int = 7):
         """Simple CNN with `n_hidden_layers`, `n_kernels`, and `kernel_size` as hyperparameters"""
         super(SimpleCNN, self).__init__()
         

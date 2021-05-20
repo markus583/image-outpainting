@@ -5,28 +5,30 @@ import torch
 from torchvision.transforms import transforms as TF
 from PIL import Image
 import numpy as np
-
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 IM_SHAPE = 90
 
 
 class PreprocessedImageDataset(Dataset):
-    def __init__(self, root, uses: int = 1, im_shape: int = 90):
+    def __init__(self, root, uses: int = 1):
         super().__init__()
 
         self.uses = uses
-        self.paths = self.image_paths(Path(root))
-        self.transforms = TF.Compose([
-            TF.Resize(size=im_shape),
-            TF.CenterCrop(size=(im_shape, im_shape)),
-            TF.ToTensor(),
-            TF.Normalize([0.4848], [0.1883])  # TODO: compute actual values of TRAIN Set
+        self.paths = sorted(self.image_paths(Path(root)))
+        self.transforms = A.Compose([
+            A.RandomResizedCrop(height=90, width=90),
+            A.Flip(),
+            A.RandomBrightnessContrast(p=0.2),
+            A.Normalize([0.48645], [0.2054]),
+            ToTensorV2()
         ])
 
     def __getitem__(self, item):
         # compute transforms of single image
         # returns tuple of tensors of shape (90, 90), (90, 90), 0-d tensor dependent on border size
-        self.image = self.transforms(Image.open(self.paths[item]))
-        self.input, self.known_mask, self.target = GetInOut(self.image)
+        self.image = self.transforms(image=np.array(Image.open(self.paths[item])))
+        self.input, self.known_mask, self.target = GetInOut(self.image['image'])
         return self.input, self.known_mask, self.target
 
     def __len__(self):

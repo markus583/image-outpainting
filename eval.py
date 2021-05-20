@@ -21,10 +21,11 @@ def _eval(loader: DataLoader, model: nn.Module,
     total_loss = 0
     for _input, mask, targets in tqdm(loader, total=len(loader)):
         _input = _input.to(device=device)
-
+        mask = mask.to(device=device)
+        concat_input = torch.cat((_input, ~mask), dim=1)
         compute_grad = torch.enable_grad() if is_train else torch.no_grad()
         with compute_grad:
-            output = model(_input)  # get model output
+            output = model(concat_input)  # get model output
             # get output from borders only
             predictions = [output[i, 0][mask[i, 0]] for i in range(len(output))]
             # compute loss
@@ -45,7 +46,7 @@ def _eval(loader: DataLoader, model: nn.Module,
     return total_loss / (len(loader) * loader.batch_size)
 
 
-def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler) -> float:
+def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler=None) -> float:
     """
     Function used to train model and check model performance on train set.
     :param train_loader: DataLoader for Training Set

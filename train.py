@@ -14,7 +14,7 @@ from torch.optim.lr_scheduler import OneCycleLR
 from torch_lr_finder import LRFinder
 from loader import PreprocessedImageDataset, crop, train_test_split, image_collate_fn
 from architectures import SimpleCNN
-from utils import load_config, plot
+from utils import load_config, plot, Normalize
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -22,8 +22,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # new best: -624: all data, bad config, leakage, 5 epochs, stupid
+# TODO: fix testing function given new updates
 # TODO: feed additional input into NN
-# TODO: data augmentation
 # TODO: everything model
 # TODO: fix LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
 # https://arxiv.org/pdf/1808.07757.pdf
@@ -32,13 +32,15 @@ def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask,
     print('Plotting samples...')
     model.eval()
     sample_batch = sample_batch.to('cuda:0')
-    output = model(sample_batch)
+    sample_mask = sample_mask.to('cuda:0')
+    concat_input = torch.cat((sample_batch, ~sample_mask), dim=1)
+    output = model(concat_input)
     #  sample_prediction = [output[i, 0][sample_mask[i, 0]] for i in range(len(output))]
-    preds = torch.zeros_like(sample_mask).type(torch.float32)  # setup tensor to store masked outputs
+    preds = torch.zeros_like(sample_mask).type(torch.float32).to('cpu')  # setup tensor to store masked outputs
     output_and_input = sample_batch.clone().cpu()  # setup tensor to store combined inputs + outputs
     for i, sample in enumerate(output_and_input):
         # Get outputs, but without input values
-        output_masked = np.where(sample_mask[i][0], output[i][0].detach().cpu().numpy(), 0)
+        output_masked = np.where(sample_mask[i][0].cpu().numpy(), output[i][0].detach().cpu().numpy(), 0)
         output_and_input[i, 0] = torch.from_numpy(output_masked).cpu()
         output_and_input[i, 0] += np.where(~sample_mask[i][0].cpu().numpy(), sample_batch[i][0].cpu().numpy(),
                                            0)  # add input to output
@@ -79,7 +81,8 @@ def _setup_out_path(result_path: Union[str, Path]) -> Tuple[Path, Path, Path]:
 
 
 def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
-         result_path: Union[str, Path], epoch_no_change_break: int = 20, find_lr: bool = False):
+         result_path: Union[str, Path], epoch_no_change_break: int = 20, find_lr: bool = False,
+         dataset_repeats: int = 3):
     # take care of possible KeyboardInterrupt
     try:
         # setup correct paths and tensorboard SummaryWriter
@@ -104,8 +107,7 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         device = torch.device(config['device'])
         plotting_interval = config['plotting_interval']
         # dataset
-        ds = PreprocessedImageDataset(dataset_path)
-
+        ds = PreprocessedImageDataset(dataset_path, uses=2)
         # loaders
         # if no values are specified to train_test_split, then train is data_part_1-6
         # remainder is evenly split among test and valid set
@@ -220,7 +222,7 @@ if __name__ == '__main__':
     results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1\000'
 
     main(dataset,
          config,
