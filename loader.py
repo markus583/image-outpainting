@@ -10,7 +10,7 @@ IM_SHAPE = 90
 
 
 class PreprocessedImageDataset(Dataset):
-    def __init__(self, root, uses=1, im_shape: int = 90):
+    def __init__(self, root, uses: int = 1, im_shape: int = 90):
         super().__init__()
 
         self.uses = uses
@@ -86,7 +86,7 @@ def train_test_split(dataset: Dataset, train: float = 0.8, val: float = 0.1, tes
     if not (0.999 <= train + val + test <= 1.001):
         raise ValueError(f'train ({train}), val ({val}) and test ({test}) '
                          f'do not sum up to 1: {train + val + test}!')
-
+    # TODO
     n = len(dataset)
     n_train, n_val = int(n * train), int(n * val)
     n_test = n - (n_train + n_val)
@@ -114,7 +114,7 @@ def image_collate_fn(image_batch: list, n_feature_channels: int = 1):
     max_target = np.max([image[2].shape for image in images])
     # Allocate a tensor that can fit all padded sequences
     stacked_images_input = torch.zeros(size=(len(images), n_feature_channels,
-                                       max_X, max_Y), dtype=torch.float32)
+                                             max_X, max_Y), dtype=torch.float32)
     stacked_images_mask = stacked_images_input.clone()
     # only if all targets should have equal size:
     # stacked_images_target = torch.zeros(size=(len(images), n_feature_channels, max_target), dtype=torch.float32)

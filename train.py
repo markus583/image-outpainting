@@ -1,27 +1,26 @@
-import shutil
 from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 from typing import Union, Tuple
-import eval as tte
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+import eval
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import OneCycleLR
-import matplotlib.pyplot as plt
+from torch_lr_finder import LRFinder
 from loader import PreprocessedImageDataset, crop, train_test_split, image_collate_fn
 from architectures import SimpleCNN
 from utils import load_config, plot
-import numpy as np
-import pandas as pd
-import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-from torch_lr_finder import LRFinder
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 # current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # new best: -624: all data, bad config, leakage, 5 epochs, stupid
-# TODO: testing
 # TODO: fix data leakage
 # TODO: feed additional input into NN
 # TODO: data augmentation
@@ -70,21 +69,22 @@ def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask,
 def _setup_out_path(result_path: Union[str, Path]) -> Tuple[Path, Path, Path]:
     result_path = Path(result_path)  # general path/root
     result_path.mkdir(exist_ok=True)
-    tb_path = result_path / 'tensorboard'  # folder for tensorboard file
-    tb_path.mkdir(exist_ok=True)
+    tensorboard_path = result_path / 'tensorboard'  # folder for tensorboard file
+    tensorboard_path.mkdir(exist_ok=True)
 
     model_path = result_path / 'models'  # folder to save plots to
     model_path.mkdir(exist_ok=True)
 
-    return result_path, tb_path, model_path
+    return result_path, tensorboard_path, model_path
 
 
 def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
          result_path: Union[str, Path], epoch_no_change_break: int = 20, find_lr: bool = False):
+    # take care of KeyboardInterrupt
     try:
         # setup correct paths and tensorboard SummaryWriter
-        result_path, tb_path, model_path = _setup_out_path(result_path)
-        writer = SummaryWriter(log_dir=str(tb_path))
+        result_path, tensorboard_path, model_path = _setup_out_path(result_path)
+        writer = SummaryWriter(log_dir=str(tensorboard_path))
 
         config = load_config(config_path)
         # save model config to csv file in result_path
@@ -148,11 +148,11 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
 
             print(f'Epoch: {epoch}')
 
-            train_loss = tte.train_eval(train, model, optimizer, scheduler)
+            train_loss = eval.train_eval(train, model, optimizer, scheduler)
             print(f'train/loss: {train_loss}')
             writer.add_scalar(tag='train/loss', scalar_value=train_loss, global_step=epoch)
 
-            val_loss = tte.test_eval(val, model)
+            val_loss = eval.test_eval(val, model)
             print(f'val/loss: {val_loss}')
             writer.add_scalar(tag='val/loss', scalar_value=val_loss, global_step=epoch)
 
@@ -187,11 +187,11 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                 break
 
         print('Best model evaluation...')
-        test_loss = tte.test_eval(test, model)
-        val_loss = tte.test_eval(val, model)
+        test_loss = eval.test_eval(test, model)
+        val_loss = eval.test_eval(val, model)
 
         print(f'Final test loss: {test_loss}, Final valid loss: {val_loss}')
-        print('Finished training process.')
+        print('Finished training.')
 
         # save final model
         timestamp_end = datetime.now().strftime("%Y%m%d-%H%M%S")

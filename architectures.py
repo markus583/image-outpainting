@@ -1,23 +1,4 @@
-# -*- coding: utf-8 -*-
-"""example_project/architectures.py
-
-Author -- Michael Widrich
-Contact -- widrich@ml.jku.at
-Date -- 01.02.2020
-
-###############################################################################
-
-The following copyright statement applies to all code within this file.
-
-Copyright statement:
-This material, no matter whether in printed or electronic form, may be used for
-personal and non-commercial educational use only. Any reproduction of this
-manuscript, no matter whether as a whole or in parts, no matter whether in
-printed or in electronic form, requires explicit prior acceptance of the
-authors.
-
-###############################################################################
-
+"""
 Architectures file of example project.
 """
 

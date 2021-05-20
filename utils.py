@@ -5,7 +5,6 @@ import torch
 import json
 import pickle
 from pathlib import Path
-from typing import Union, Any
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -19,6 +18,8 @@ def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
         # get min and max values of input image s.t. all images are plotted in same gray color
         vmax = inputs[i].max()
         vmin = inputs[i].min()
+
+        # create plots
         ax[0, 0].clear()
         ax[0, 0].set_title('input')
         ax[0, 0].imshow(inputs[i], cmap=plt.cm.gray, interpolation='none', vmin=vmin, vmax=vmax)
@@ -37,6 +38,7 @@ def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
         ax[1, 0].set_axis_off()
         fig.suptitle(f'Epoch: {epoch}, Image Nr.: {i}')
         fig.tight_layout()
+        # save plots and add to tensorboard
         fig.savefig(os.path.join(plot_path, f"{epoch:07d}_{i:02d}.png"), dpi=dpi)
         writer.add_figure(tag=f'train/samples_{i}', figure=fig, global_step=epoch)
     del fig
@@ -44,6 +46,7 @@ def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
 
 def Normalize(ds):
     """
+    Get mean, std of an image DataSet.
     :param ds: Dataset for which mean, std are to be computed.
     :return: mean, std of all images in ds
     """
@@ -65,16 +68,16 @@ def Normalize(ds):
     return mean, std
 
 
-def load_config(path: Union[Path, str]):
+def load_config(path):
     with open(Path(path), 'r') as f:
         return json.load(f)
 
 
-def load_pkl(path: Union[str, Path]) -> Any:
+def load_pkl(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
 
 
-def save_pkl(path: Union[str, Path], obj: Any):
+def save_pkl(path, file):
     with open(path, 'wb') as f:
-        pickle.dump(obj, f)
+        pickle.dump(file, f)
