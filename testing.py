@@ -57,5 +57,5 @@ if __name__ == '__main__':
                    r'2\Assignment 02\supplements_ex5\project\v2\python2-project\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\working_config.json '
-    save_pkl_path = r'C:\Users\Markus\Desktop\results\save.pkl'
+    save_pkl_path = r'C:\Users\Markus\Desktop\results\save.pkl'  # TODO: change path!
     main(model_path, samples_path, config_path, save_pkl_path)

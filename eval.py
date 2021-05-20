@@ -42,7 +42,7 @@ def _eval(loader: DataLoader, model: nn.Module,
                 if scheduler:
                     scheduler.step()
             total_loss += loss.detach().cpu().item()  # finally, accumulate losses
-    return total_loss / len(loader)  # TODO
+    return total_loss / (len(loader) * loader.batch_size)
 
 
 def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler) -> float:

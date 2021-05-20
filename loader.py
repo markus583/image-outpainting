@@ -82,24 +82,16 @@ def GetInOut(image, border_x=None, border_y=None):
     return crop(image, border_x=border_x, border_y=border_y)
 
 
-def train_test_split(dataset: Dataset, train: float = 0.8, val: float = 0.1, test: float = 0.1, seed: int = 0):
-    if not (0.999 <= train + val + test <= 1.001):
-        raise ValueError(f'train ({train}), val ({val}) and test ({test}) '
-                         f'do not sum up to 1: {train + val + test}!')
-    # TODO
-    n = len(dataset)
-    n_train, n_val = int(n * train), int(n * val)
-    n_test = n - (n_train + n_val)
+def train_test_split(dataset: Dataset, train_size: float = 0.7482291345857714,
+                     val_size: float = 0.12588543270711428, test_size: float = 0.12588543270711428, seed: int = 0):
     torch.manual_seed(seed)
-    return torch.utils.data.random_split(dataset, (n_train, n_val, n_test))
-
-
-ds = PreprocessedImageDataset(r'C:\Users\Markus\AI\dataset\dataset', im_shape=90)
-
-loader = DataLoader(ds,
-                    batch_size=10,
-                    num_workers=0,
-                    shuffle=False)
+    # use indices from splits
+    train = torch.utils.data.Subset(dataset, indices=np.arange(int(len(dataset) * train_size)))
+    val = torch.utils.data.Subset(dataset, indices=np.arange(int(len(dataset) * train_size),
+                                                             int(len(dataset) * (val_size + train_size))))
+    test = torch.utils.data.Subset(dataset, indices=np.arange(int(len(dataset) * (train_size + val_size)),
+                                                              int(len(dataset))))  # just use remainder of dataset
+    return train, val, test
 
 
 def image_collate_fn(image_batch: list, n_feature_channels: int = 1):

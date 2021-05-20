@@ -1,11 +1,9 @@
 import os
 from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
-import torch
 import json
 import pickle
 from pathlib import Path
-from torch.utils.tensorboard import SummaryWriter
 
 
 def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):

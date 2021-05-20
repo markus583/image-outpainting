@@ -15,17 +15,17 @@ from torch_lr_finder import LRFinder
 from loader import PreprocessedImageDataset, crop, train_test_split, image_collate_fn
 from architectures import SimpleCNN
 from utils import load_config, plot
-
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 # current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # new best: -624: all data, bad config, leakage, 5 epochs, stupid
-# TODO: fix data leakage
 # TODO: feed additional input into NN
 # TODO: data augmentation
 # TODO: everything model
-# TODO: LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
+# TODO: fix LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
 # https://arxiv.org/pdf/1808.07757.pdf
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
                   writer: SummaryWriter, path):
@@ -80,7 +80,7 @@ def _setup_out_path(result_path: Union[str, Path]) -> Tuple[Path, Path, Path]:
 
 def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
          result_path: Union[str, Path], epoch_no_change_break: int = 20, find_lr: bool = False):
-    # take care of KeyboardInterrupt
+    # take care of possible KeyboardInterrupt
     try:
         # setup correct paths and tensorboard SummaryWriter
         result_path, tensorboard_path, model_path = _setup_out_path(result_path)
@@ -107,19 +107,22 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         ds = PreprocessedImageDataset(dataset_path)
 
         # loaders
-        train, val, test = train_test_split(ds, train=0.7, val=0.15, test=0.15)
+        # if no values are specified to train_test_split, then train is data_part_1-6
+        # remainder is evenly split among test and valid set
+        train, val, test = train_test_split(ds)
         train = DataLoader(train, batch_size=batch_size, num_workers=n_workers,
-                           collate_fn=image_collate_fn
+                           collate_fn=image_collate_fn, shuffle=True
                            )
         val = DataLoader(val, batch_size=batch_size, num_workers=n_workers,
-                         collate_fn=image_collate_fn
+                         collate_fn=image_collate_fn, shuffle=False
                          )
         test = DataLoader(test, batch_size=batch_size, num_workers=n_workers,
-                          collate_fn=image_collate_fn
+                          collate_fn=image_collate_fn, shuffle=False
                           )
-
         # model
-        model = SimpleCNN()
+        model = SimpleCNN(n_hidden_layers=network_spec['n_hidden_layers'],
+                          n_kernels=network_spec['n_kernels'],
+                          kernel_size=network_spec['kernel_size'])
         model.to(device=device)
 
         # optimizer
@@ -148,7 +151,7 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
 
             print(f'Epoch: {epoch}')
 
-            train_loss = eval.train_eval(train, model, optimizer, scheduler)
+            train_loss = eval.train_eval(train, model, optimizer)
             print(f'train/loss: {train_loss}')
             writer.add_scalar(tag='train/loss', scalar_value=train_loss, global_step=epoch)
 
@@ -213,11 +216,11 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
 if __name__ == '__main__':
     # setup own folder for each experiment
     timestamp_start = datetime.now().strftime("%Y%m%d-%H%M%S")
-    results = r'C:\Users\Markus\Desktop\results'
-    results += f'\experiment_{timestamp_start}'
+    results = r'C:\Users\Markus\Desktop\results\\'
+    results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset'
 
     main(dataset,
          config,

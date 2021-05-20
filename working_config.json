@@ -2,12 +2,12 @@
   "device": "cuda:0",
   "learningrate": 1e-3,
   "weight_decay": 1e-5,
-  "plotting_interval": 5,
-  "n_epochs": 15,
+  "plotting_interval": 4,
+  "n_epochs": 20,
   "n_workers": 0,
-  "batch_size": 24,
+  "batch_size": 32,
   "network_config": {
-    "n_hidden_layers": 6,
+    "n_hidden_layers": 3,
     "n_in_channels": 1,
     "n_kernels": 32,
     "kernel_size": 7
