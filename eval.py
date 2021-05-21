@@ -27,7 +27,9 @@ def _eval(loader: DataLoader, model: nn.Module,
         with compute_grad:
             output = model(concat_input)  # get model output
             # get output from borders only
-            predictions = [output['out'][i, 0][mask[i, 0]] for i in range(len(output['out']))]
+            if len(output) == 1:  # get proper output from PyTorch model zoo models
+                output = output['out']
+            predictions = [output[i, 0][mask[i, 0]] for i in range(len(output))]
             # compute loss
             losses = torch.stack(
                 [mse_loss(prediction, target.to(device=device).view(-1))

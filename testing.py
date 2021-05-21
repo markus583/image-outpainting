@@ -1,5 +1,5 @@
 from loader import *
-from architectures import SimpleCNN
+from architectures import *
 from utils import load_config, load_pkl, save_pkl, plot
 from scoring import scoring
 import albumentations as A
@@ -18,6 +18,7 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
                       n_kernels=network_spec['n_kernels'],
                       kernel_size=network_spec['kernel_size']
                       )
+    model = FCN_ResNet50().get()
     model.to(device=config['device'])
     model.load_state_dict(torch.load(model_path))
 
@@ -42,6 +43,8 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
             concat_input = torch.cat((masked_input, torch.from_numpy(known_array).cuda().unsqueeze(0)), dim=0)
             # get outputs
             output = model(concat_input.unsqueeze(0))
+            if len(output) == 1:  # get proper output from PyTorch model zoo models
+                output = output['out']
             prediction = output[0, 0][~known_array.astype(np.bool)]  # and border of outputs
             prediction = (prediction * 0.2054 + 0.48645) * 255  # un-normalize border/target outputs
             # append to list of predictions
@@ -58,8 +61,8 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\experiment_20210521-090913\models' \
-                 r'\model_best_17_20210521-115453_0.487.pt '
+    model_path = r'C:\Users\Markus\Desktop\results\experiment_20210521-143039\models' \
+                 r'\model_best_40_20210521-185457_0.487.pt '
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                    r'2\Assignment 02\supplements_ex5\project\v2\python2-project\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \

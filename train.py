@@ -24,8 +24,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # current best score: -778.8: bad config, only 5 epochs, data_part_1, leakage
 # new best: -624: all data, bad config, leakage, 5 epochs, stupid
-# TODO: fix testing function given new updates
-# TODO: feed additional input into NN
+# -634: FCN ResNet 50, only on data_part_1, mature pipeline, 41 (!) epochs. bad.
 # TODO: everything model
 # TODO: fix LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
 # https://arxiv.org/pdf/1808.07757.pdf
@@ -46,7 +45,7 @@ def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask,
     sample_mask = sample_mask.to('cuda:0')
     concat_input = torch.cat((sample_batch, ~sample_mask), dim=1)
     output = model(concat_input)
-    if len(output) == 1:
+    if len(output) == 1:  # get proper output from PyTorch model zoo models
         output = output['out']
     #  sample_prediction = [output[i, 0][sample_mask[i, 0]] for i in range(len(output))]
     preds = torch.zeros_like(sample_mask).type(torch.float32).to('cpu')  # setup tensor to store masked outputs
@@ -145,7 +144,8 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                           n_kernels=network_spec['n_kernels'],
                           kernel_size=network_spec['kernel_size']
                           )
-        model = FCN_ResNet50().get()
+        model = DenseCNN(n_hidden_layers=network_spec['n_hidden_layers'],
+                         )
         model.to(device=device)
         # optimizer
         optimizer = torch.optim.AdamW(params=model.parameters())
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1\000'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1'
 
     main(dataset,
          config,

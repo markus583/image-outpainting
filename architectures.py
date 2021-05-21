@@ -28,6 +28,73 @@ class SimpleCNN(torch.nn.Module):
         return pred
 
 
+class DenseCNN(torch.nn.Module):
+    def __init__(self, n_input_channels: int = 2, n_hidden_layers: int = 3, n_kernels: int = 32, kernel_size: int = 7):
+        """CNN, consisting of `n_hidden_layers` linear layers, using relu
+        activation function in the hidden CNN layers.
+
+        Parameters
+        ----------
+        n_input_channels: int
+            Number of features channels in input tensor
+        n_hidden_layers: int
+            Number of conv. layers
+        n_kernels: int
+            Number of kernels in each layer
+        kernel_size: int
+            Number of features in output tensor
+        """
+        super(DenseCNN, self).__init__()
+
+        super().__init__()
+        layers = []
+        n_concat_channels = n_input_channels
+        for i in range(n_hidden_layers):
+            # Add a CNN layer
+            layer = torch.nn.Conv2d(in_channels=n_concat_channels,
+                                    out_channels=n_kernels,
+                                    kernel_size=kernel_size,
+                                    padding=int(kernel_size / 2))
+            layers.append(layer)
+            self.add_module(f"conv_{i:03d}", layer)
+            # Prepare for concatenated input
+            n_concat_channels = n_kernels + n_input_channels
+            n_input_channels = n_kernels
+
+        self.layers = layers
+
+    def forward(self, x):
+        """Apply CNN to `x`
+
+        Parameters
+        ----------
+        x: torch.tensor
+            Input tensor of shape (n_samples, n_input_channels, x, y)
+
+        Returns
+        ----------
+        torch.tensor
+            Output tensor of shape (n_samples, n_output_channels, u, v)
+        """
+        # Apply layers module
+        skip_connection = None
+        output = None
+        for layer in self.layers:
+            # If previous output and skip_connection exist, concatenate
+            # them and store previous output as new skip_connection. Otherwise,
+            # use x as input and store it as skip_connection.
+            if skip_connection is not None:
+                inp = torch.cat([output, skip_connection], dim=1)
+                skip_connection = output
+            else:
+                inp = x
+                skip_connection = x
+            # Apply CNN layer
+            output = torch.relu_(layer(inp))
+
+        return output
+
+
 class FCN_ResNet50(torch.nn.Module):
     def __init__(self):
         super(FCN_ResNet50, self).__init__()
