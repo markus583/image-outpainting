@@ -8,15 +8,17 @@ import pandas as pd
 import os
 import eval
 import torch
+import torchvision
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import OneCycleLR
 from torch_lr_finder import LRFinder
 from loader import PreprocessedImageDataset, crop, train_test_split, image_collate_fn
-from architectures import SimpleCNN
+from architectures import *
 from utils import load_config, plot, Normalize
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
@@ -27,24 +29,40 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # TODO: everything model
 # TODO: fix LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
 # https://arxiv.org/pdf/1808.07757.pdf
+
+class Identity(torch.nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def forward(self, x):
+        return x
+
+
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
-                  writer: SummaryWriter, path):
+                  writer: SummaryWriter, path, show_all: bool = True):
     print('Plotting samples...')
     model.eval()
     sample_batch = sample_batch.to('cuda:0')
     sample_mask = sample_mask.to('cuda:0')
     concat_input = torch.cat((sample_batch, ~sample_mask), dim=1)
     output = model(concat_input)
+    if len(output) == 1:
+        output = output['out']
     #  sample_prediction = [output[i, 0][sample_mask[i, 0]] for i in range(len(output))]
     preds = torch.zeros_like(sample_mask).type(torch.float32).to('cpu')  # setup tensor to store masked outputs
     output_and_input = sample_batch.clone().cpu()  # setup tensor to store combined inputs + outputs
     for i, sample in enumerate(output_and_input):
         # Get outputs, but without input values
         output_masked = np.where(sample_mask[i][0].cpu().numpy(), output[i][0].detach().cpu().numpy(), 0)
+        output_only = output[i][0].detach().cpu().numpy()
         output_and_input[i, 0] = torch.from_numpy(output_masked).cpu()
         output_and_input[i, 0] += np.where(~sample_mask[i][0].cpu().numpy(), sample_batch[i][0].cpu().numpy(),
                                            0)  # add input to output
-        preds[i][0] += output_masked  # only add output values
+        # either show entire CNN output or only border values
+        if show_all:
+            preds[i][0] += output_only
+        else:
+            preds[i][0] += output_masked  # only add output values
     target_plotted = sample_mask.clone().type(torch.float32)
     # reconstruct target array
     for i, sample in enumerate(target_plotted):
@@ -81,7 +99,7 @@ def _setup_out_path(result_path: Union[str, Path]) -> Tuple[Path, Path, Path]:
 
 
 def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
-         result_path: Union[str, Path], epoch_no_change_break: int = 20, find_lr: bool = False,
+         result_path: Union[str, Path], epoch_no_change_break: int = 10, find_lr: bool = False,
          dataset_repeats: int = 3):
     # take care of possible KeyboardInterrupt
     try:
@@ -106,8 +124,9 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         n_epochs = config['n_epochs']
         device = torch.device(config['device'])
         plotting_interval = config['plotting_interval']
+        LR = config['learning_rate']
         # dataset
-        ds = PreprocessedImageDataset(dataset_path, uses=2)
+        ds = PreprocessedImageDataset(dataset_path, uses=dataset_repeats)
         # loaders
         # if no values are specified to train_test_split, then train is data_part_1-6
         # remainder is evenly split among test and valid set
@@ -124,9 +143,10 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         # model
         model = SimpleCNN(n_hidden_layers=network_spec['n_hidden_layers'],
                           n_kernels=network_spec['n_kernels'],
-                          kernel_size=network_spec['kernel_size'])
+                          kernel_size=network_spec['kernel_size']
+                          )
+        model = FCN_ResNet50().get()
         model.to(device=device)
-
         # optimizer
         optimizer = torch.optim.AdamW(params=model.parameters())
 
@@ -207,7 +227,7 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
         log_dict['final_valid_loss'] = val_loss
         log_df_final = pd.DataFrame(data=log_dict)
         log_df_final.to_csv(Path(result_path / 'config_final.csv'))
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, IndexError):
         print('Finished training process due to keyboard interrupt.')
         # save last model state
         timestamp_end = datetime.now().strftime("%Y%m%d-%H%M%S")

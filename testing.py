@@ -4,6 +4,7 @@ from utils import load_config, load_pkl, save_pkl, plot
 from scoring import scoring
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from datetime import datetime
 
 
 def main(model_path: Union[str, Path], samples_path: Union[str, Path],
@@ -13,7 +14,10 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
     network_spec = config['network_config']
 
     # setup model and load state
-    model = SimpleCNN()
+    model = SimpleCNN(n_hidden_layers=network_spec['n_hidden_layers'],
+                      n_kernels=network_spec['n_kernels'],
+                      kernel_size=network_spec['kernel_size']
+                      )
     model.to(device=config['device'])
     model.load_state_dict(torch.load(model_path))
 
@@ -29,15 +33,15 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
             # normalize sample
             transforms = A.Compose([
                 A.Normalize([0.48645], [0.2054]),
-                A.ToTensorV2(),
+                ToTensorV2(),
             ])
 
-            _input = transforms(input_array)  # normalized, but borders too! --> borders != 0
+            _input = transforms(image=input_array)['image']  # normalized, but borders too! --> borders != 0
             masked_input = np.where(known_array, _input.detach().cpu().numpy(), 0)  # now borders are also 0
             masked_input = torch.from_numpy(masked_input).cuda()
-
+            concat_input = torch.cat((masked_input, torch.from_numpy(known_array).cuda().unsqueeze(0)), dim=0)
             # get outputs
-            output = model(masked_input.unsqueeze(0))
+            output = model(concat_input.unsqueeze(0))
             prediction = output[0, 0][~known_array.astype(np.bool)]  # and border of outputs
             prediction = (prediction * 0.2054 + 0.48645) * 255  # un-normalize border/target outputs
             # append to list of predictions
@@ -54,10 +58,13 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\models\model_20_20210519-145431.pt'
+    model_path = r'C:\Users\Markus\Desktop\results\experiment_20210521-090913\models' \
+                 r'\model_best_17_20210521-115453_0.487.pt '
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                    r'2\Assignment 02\supplements_ex5\project\v2\python2-project\example_testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\working_config.json '
-    save_pkl_path = r'C:\Users\Markus\Desktop\results\save.pkl'  # TODO: change path!
+    timestamp_start = datetime.now().strftime("%Y%m%d-%H%M%S")
+    save_pkl_path = r'C:\Users\Markus\Desktop\results\save_'
+    save_pkl_path += f'{timestamp_start}.pkl'
     main(model_path, samples_path, config_path, save_pkl_path)

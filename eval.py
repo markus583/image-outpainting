@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 
 def _eval(loader: DataLoader, model: nn.Module,
-          optimizer=None, scheduler=None) -> float:
+          optimizer=None, scheduler=False) -> float:
     """
     General purpose function used to train model and check its performance on a given DataLoader.
     :param loader: DataLoader
@@ -27,7 +27,7 @@ def _eval(loader: DataLoader, model: nn.Module,
         with compute_grad:
             output = model(concat_input)  # get model output
             # get output from borders only
-            predictions = [output[i, 0][mask[i, 0]] for i in range(len(output))]
+            predictions = [output['out'][i, 0][mask[i, 0]] for i in range(len(output['out']))]
             # compute loss
             losses = torch.stack(
                 [mse_loss(prediction, target.to(device=device).view(-1))
