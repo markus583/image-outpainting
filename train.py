@@ -144,8 +144,8 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                           n_kernels=network_spec['n_kernels'],
                           kernel_size=network_spec['kernel_size']
                           )
-        model = DenseCNN(n_hidden_layers=network_spec['n_hidden_layers'],
-                         )
+        # model = DenseCNN(n_hidden_layers=network_spec['n_hidden_layers'],
+        #                 )
         model.to(device=device)
         # optimizer
         optimizer = torch.optim.AdamW(params=model.parameters())
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset'
 
     main(dataset,
          config,
