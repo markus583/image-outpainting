@@ -33,14 +33,19 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
-                  writer: SummaryWriter, path, show_all: bool = True):
+                  writer: SummaryWriter, path, show_all: bool = True, concat=True, stack=False):
     print('Plotting samples...')
     model.eval()
     sample_batch = sample_batch.to('cuda:0')
     sample_mask = sample_mask.to('cuda:0')
-    concat_input = torch.cat((sample_batch, ~sample_mask), dim=1)
+    if concat:
+        concat_input = torch.cat((sample_batch, ~sample_mask), dim=1)
+    elif stack:
+        concat_input = torch.cat((sample_batch,) * 3, dim=1)
+    else:
+        concat_input = sample_batch
     output = model(concat_input)
-    if len(output) == 1:  # get proper output from PyTorch model zoo models
+    if len(output) == 1 or len(output) == 2:  # get proper output from PyTorch model zoo models
         output = output['out']
     #  sample_prediction = [output[i, 0][sample_mask[i, 0]] for i in range(len(output))]
     preds = torch.zeros_like(sample_mask).type(torch.float32).to('cpu')  # setup tensor to store masked outputs
@@ -140,9 +145,10 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                           kernel_size=network_spec['kernel_size']
                           )
 
-        model = fcn8_resnet34(batch_size).get()
+        # model = ResCNN()
         model.to(device=device)
-
+        concat = True  # use to control whether mask is fed into CNN
+        stack = False  # controls whether grayscale channel is used 3 times --> pre-trained models
         print(summary(model))
         # optimizer
         optimizer = torch.optim.AdamW(params=model.parameters())
@@ -170,18 +176,19 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
 
             print(f'Epoch: {epoch}')
 
-            train_loss = eval.train_eval(train, model, optimizer)
+            train_loss = eval.train_eval(train, model, optimizer, concat=concat, stack=stack)
             print(f'train/loss: {train_loss}')
             writer.add_scalar(tag='train/loss', scalar_value=train_loss, global_step=epoch)
 
-            val_loss = eval.test_eval(val, model)
+            val_loss = eval.test_eval(val, model, concat=concat, stack=stack)
             print(f'val/loss: {val_loss}')
             writer.add_scalar(tag='val/loss', scalar_value=val_loss, global_step=epoch)
 
             # LOOKING INTO THE MODEL
             # plot every x times and after last epoch
             if epoch % plotting_interval == 0 or epoch == n_epochs - 1:
-                _plot_samples(epoch, model, sample_input, sample_mask, sample_targets, writer, results)
+                _plot_samples(epoch, model, sample_input, sample_mask, sample_targets, writer, results,
+                              concat=concat, stack=stack)
             # Add weights as arrays to tensorboard
             for i, param in enumerate(model.parameters()):
                 writer.add_histogram(tag=f'training/param_{i}', values=param.cpu(),
@@ -241,7 +248,7 @@ if __name__ == '__main__':
     results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1\000'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset'
 
     main(dataset,
          config,

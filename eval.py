@@ -5,7 +5,8 @@ from tqdm import tqdm
 
 
 def _eval(loader: DataLoader, model: nn.Module,
-          optimizer=None, scheduler=False) -> float:
+          optimizer=None, scheduler=False,
+          concat=True, stack=False) -> float:
     """
     General purpose function used to train model and check its performance on a given DataLoader.
     :param loader: DataLoader
@@ -22,12 +23,17 @@ def _eval(loader: DataLoader, model: nn.Module,
     for _input, mask, targets in tqdm(loader, total=len(loader)):
         _input = _input.to(device=device)
         mask = mask.to(device=device)
-        concat_input = torch.cat((_input, ~mask), dim=1)
+        if concat:
+            concat_input = torch.cat((_input, ~mask), dim=1)
+        elif stack:
+            concat_input = torch.cat((_input, )*3, dim=1)
+        else:
+            concat_input = _input
         compute_grad = torch.enable_grad() if is_train else torch.no_grad()
         with compute_grad:
             output = model(concat_input)  # get model output
             # get output from borders only
-            if len(output) == 1:  # get proper output from PyTorch model zoo models
+            if len(output) == 1 or len(output) == 2:  # get proper output from PyTorch model zoo models
                 output = output['out']
             predictions = [output[i, 0][mask[i, 0]] for i in range(len(output))]
             # compute loss
@@ -48,9 +54,11 @@ def _eval(loader: DataLoader, model: nn.Module,
     return total_loss / (len(loader) * loader.batch_size)
 
 
-def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler=None) -> float:
+def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler=None, concat=True, stack=False) -> float:
     """
     Function used to train model and check model performance on train set.
+    :param stack: Whether to stack grayscale 1D-input to grayscale 3D-input.
+    :param concat: Whether to concatenate mask with input or not.
     :param train_loader: DataLoader for Training Set
     :param model: PyTorch model - CNN
     :param optimizer: PyTorch Optimizer
@@ -59,10 +67,10 @@ def train_eval(train_loader: DataLoader, model: nn.Module, optimizer, scheduler=
     """
     assert optimizer is not None  # optimizer is needed
     model.train()
-    return _eval(train_loader, model, optimizer, scheduler)
+    return _eval(train_loader, model, optimizer, scheduler, concat=concat, stack=stack)
 
 
-def test_eval(test_loader: DataLoader, model: nn.Module):
+def test_eval(test_loader: DataLoader, model: nn.Module, concat=True, stack=False):
     """
     Function used to check model performance on valid/test set.
     :param test_loader: DataLoader for valid/test set
@@ -70,4 +78,4 @@ def test_eval(test_loader: DataLoader, model: nn.Module):
     :return: total loss on training/evaluation set.
     """
     model.eval()
-    return _eval(test_loader, model)
+    return _eval(test_loader, model, concat=concat, stack=stack)
