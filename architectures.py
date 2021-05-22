@@ -4,6 +4,15 @@ Architectures file of example project.
 
 import torch
 import torchvision
+from segmentation.models import all_models
+
+
+class Identity(torch.nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def forward(self, x):
+        return x
 
 
 class SimpleCNN(torch.nn.Module):
@@ -98,11 +107,23 @@ class DenseCNN(torch.nn.Module):
 class FCN_ResNet50(torch.nn.Module):
     def __init__(self):
         super(FCN_ResNet50, self).__init__()
-        self.model = torchvision.models.segmentation.fcn_resnet50(pretrained=False, progress=True)
-        self.model.backbone.conv1 = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3),
-                                                    bias=False)
+        self.model = torchvision.models.segmentation.fcn_resnet50(pretrained=False, progress=True, num_classes=1)
+        # self.model.backbone.conv1 = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3),
+        #                                            bias=False)  # TODO: get rid of this?
         # model.classifier = Identity()
         self.model.classifier[4] = torch.nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1))
+
+    def get(self):
+        return self.model
+
+
+class fcn8_resnet34(torch.nn.Module):
+    def __init__(self, batch_size, n_classes: int = 1):
+        super(fcn8_resnet34, self).__init__()
+        self.model = all_models.model_from_name['fcn32_resnet152'](n_classes, batch_size)
+        self.model.features[0] = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3),
+                                                 bias=False)
+        self.model.classifier[1] = Identity()
 
     def get(self):
         return self.model

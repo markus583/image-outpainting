@@ -18,6 +18,8 @@ from architectures import *
 from utils import load_config, plot, Normalize
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from torchinfo import summary
+
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -28,13 +30,6 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # TODO: everything model
 # TODO: fix LR scheduler https://www.kamwithk.com/super-convergence-with-just-pytorch
 # https://arxiv.org/pdf/1808.07757.pdf
-
-class Identity(torch.nn.Module):
-    def __init__(self):
-        super(Identity, self).__init__()
-
-    def forward(self, x):
-        return x
 
 
 def _plot_samples(epoch: int, model: torch.nn.Module, sample_batch, sample_mask, sample_targets,
@@ -144,9 +139,11 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                           n_kernels=network_spec['n_kernels'],
                           kernel_size=network_spec['kernel_size']
                           )
-        # model = DenseCNN(n_hidden_layers=network_spec['n_hidden_layers'],
-        #                 )
+
+        model = fcn8_resnet34(batch_size).get()
         model.to(device=device)
+
+        print(summary(model))
         # optimizer
         optimizer = torch.optim.AdamW(params=model.parameters())
 
@@ -190,10 +187,12 @@ def main(dataset_path: Union[str, Path], config_path: Union[str, Path],
                 writer.add_histogram(tag=f'training/param_{i}', values=param.cpu(),
                                      global_step=epoch)
             # Add gradients as arrays to tensorboard
+            """
             for i, param in enumerate(model.parameters()):
                 writer.add_histogram(tag=f'training/gradients_{i}',
                                      values=param.grad.cpu(),
                                      global_step=epoch)
+                """
             print(f'Logs written into tensorboard: epoch: {epoch}')
 
             # save current best model if it has lowest validation loss so far
@@ -242,7 +241,7 @@ if __name__ == '__main__':
     results += f'experiment_{timestamp_start}'
     config = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python 2\Assignment ' \
              r'02\supplements_ex5\project\v2\python2-project\working_config.json '
-    dataset = r'C:\Users\Markus\AI\dataset\dataset'
+    dataset = r'C:\Users\Markus\AI\dataset\dataset\data_part_1\000'
 
     main(dataset,
          config,

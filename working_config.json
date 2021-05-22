@@ -4,10 +4,10 @@
   "weight_decay": 1e-5,
   "plotting_interval": 3,
   "n_epochs": 20,
-  "n_workers": 10,
+  "n_workers": 12,
   "batch_size": 64,
   "network_config": {
-    "n_hidden_layers": 8,
+    "n_hidden_layers": 2,
     "n_in_channels": 2,
     "n_kernels": 32,
     "kernel_size": 7
