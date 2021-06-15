@@ -14,17 +14,17 @@ import torch
 
 
 def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
-    """Plotting the inputs, targets, and predictions to file `path`"""
+    """Plot inputs, targets, and predictions to file 'path'"""
     plot_path = os.path.join(path, 'plots')
     os.makedirs(plot_path, exist_ok=True)
     fig, ax = plt.subplots(2, 2)
 
     for i in range(len(inputs)):
-        # get min and max values of input image s.t. all images are plotted in same gray color
+        # get min and max values of input image s.t. all images are plotted in same gray color --> more comparable
         vmax = inputs[i].max()
         vmin = inputs[i].min()
 
-        # create plots
+        # create 4 plots
         ax[0, 0].clear()
         ax[0, 0].set_title('input')
         ax[0, 0].imshow(inputs[i], cmap=plt.cm.gray, interpolation='none', vmin=vmin, vmax=vmax)
@@ -43,6 +43,7 @@ def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
         ax[1, 0].set_axis_off()
         fig.suptitle(f'Epoch: {epoch}, Image Nr.: {i}')
         fig.tight_layout()
+
         # save plots and add to tensorboard
         fig.savefig(os.path.join(plot_path, f"{epoch:07d}_{i:02d}.png"), dpi=dpi)
         writer.add_figure(tag=f'train/samples_{i}', figure=fig, global_step=epoch)
@@ -51,7 +52,7 @@ def plot(inputs, targets, predictions, combined, writer, epoch, path, dpi=300):
 
 def Normalize(ds):
     """
-    Get mean, std of an image DataSet.
+    Get mean, std of of all images in an image DataSet.
     :param ds: Dataset for which mean, std are to be computed.
     :return: mean, std of all images in ds
     """
@@ -63,11 +64,11 @@ def Normalize(ds):
     mean = 0.
     std = 0.
     for i, images in enumerate(loader):
-        batch_samples = images.size(0)  # batch size (the last batch can have smaller size!)
+        batch_samples = images.size(0)  # batch size (last batch be smaller)
         images = images.view(batch_samples, images.size(1), -1)
         mean += images.type(torch.float32).mean(2).sum(0)
         std += images.type(torch.float32).std(2).sum(0)
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(i)
     mean /= len(loader.dataset)
     std /= len(loader.dataset)
@@ -100,8 +101,7 @@ class ImageDataset(Dataset):
             A.CenterCrop(height=90, width=90),
             ToTensorV2()
         ])
-        # com
-        # pute transforms of single image
+        # compute transforms of single image
         # returns tuple of tensors of shape (90, 90), (90, 90), 0-d tensor dependent on border size
 
     def __getitem__(self, item):
@@ -117,8 +117,3 @@ class ImageDataset(Dataset):
         """
         paths = list(root.rglob('*.jpg')) * self.uses
         return paths
-
-
-#dataset = ImageDataset(r'C:\Users\Markus\AI\dataset\dataset')
-#mean, std = Normalize(dataset)
-#print(mean, std)

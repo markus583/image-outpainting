@@ -8,7 +8,8 @@ from datetime import datetime
 
 
 def main(model_path: Union[str, Path], samples_path: Union[str, Path],
-         config_path: Union[str, Path], pkl_path: Union[str, Path]):
+         config_path: Union[str, Path], pkl_path: Union[str, Path],
+         example: bool = True):
     config = load_config(config_path)
 
     network_spec = config['network_config']
@@ -18,8 +19,7 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
                       n_kernels=network_spec['n_kernels'],
                       kernel_size=network_spec['kernel_size']
                       )
-    model = SimpleCNN(n_hidden_layers=network_spec['n_hidden_layers']
-                      )
+
     model.to(device=config['device'])
     model.load_state_dict(torch.load(model_path))
 
@@ -46,7 +46,7 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
             output = model(concat_input.unsqueeze(0))
             # if len(output) == 1:  # get proper output from PyTorch model zoo models  # TODO: fix this
             #    output = output['out']
-            prediction = output[0, 0][~known_array.astype(np.bool)]  # and border of outputs
+            prediction = output[0, 0][~known_array.astype(bool)]  # and border of outputs
             prediction = (prediction * 0.2054 + 0.48645) * 255  # un-normalize border/target outputs
             # append to list of predictions
             predictions.append((prediction.detach().cpu().numpy().astype(np.uint8)))
@@ -55,20 +55,21 @@ def main(model_path: Union[str, Path], samples_path: Union[str, Path],
     # save list containing all predictions as pkl file
     save_pkl(pkl_path, predictions)
     # plot(images, predictions, masks, SummaryWriter(log_dir=str(tb_path)))  # TODO: plot, sometimes at least
-    true_target_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
-                       r'2\Assignment ' \
-                       r'02\supplements_ex5\project\v2\python2-project\example_submission_perfect.pkl'
-    print(scoring(pkl_path, true_target_path))
+    if example:
+        true_target_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
+                           r'2\Assignment ' \
+                           r'02\supplements_ex5\project\v2\python2-project\example_submission_perfect.pkl'
+        print(scoring(pkl_path, true_target_path))
 
 
 if __name__ == '__main__':
-    model_path = r'C:\Users\Markus\Desktop\results\experiment_20210522-072758\models' \
-                 r'\model_best_6_20210522-075011_0.533.pt '
+    model_path = r'C:\Users\Markus\Desktop\results\experiment_20210523-075255\models' \
+                 r'\model_best_4_20210523-084800_0.453.pt '
     samples_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
-                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\example_testset.pkl '
+                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\testset.pkl '
     config_path = r'C:\Users\Markus\Google Drive\linz\Subjects\Programming in Python\Programming in Python ' \
                   r'2\Assignment 02\supplements_ex5\project\v2\python2-project\working_config.json '
     timestamp_start = datetime.now().strftime("%Y%m%d-%H%M%S")
     save_pkl_path = r'C:\Users\Markus\Desktop\results\save_'
     save_pkl_path += f'{timestamp_start}.pkl'
-    main(model_path, samples_path, config_path, save_pkl_path)
+    main(model_path, samples_path, config_path, save_pkl_path, example=False)

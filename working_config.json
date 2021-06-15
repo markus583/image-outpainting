@@ -3,13 +3,13 @@
   "learning_rate": 1e-3,
   "weight_decay": 1e-5,
   "plotting_interval": 3,
-  "n_epochs": 100,
-  "n_workers": 8,
-  "batch_size": 64,
+  "n_epochs": 20,
+  "n_workers": 11,
+  "batch_size": 48,
   "network_config": {
     "n_hidden_layers": 5,
     "n_in_channels": 2,
-    "n_kernels": 64,
+    "n_kernels": 48,
     "kernel_size": 7
   }
 }

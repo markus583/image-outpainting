@@ -1,8 +1,15 @@
-from torch.utils.data import DataLoader, Subset, Dataset
-from typing import Tuple, List, Union, Dict, NamedTuple, Callable
+"""
+In this file, we define the ImageDataset and preprocess it,
+define the collate_fn,
+and how we split the data.
+
+Note: I used albumentations because it has some additional nice features in addition to torchvision.
+However, in the end, I did not really use any fancy transforms they provide.
+So, the same could be done with torchvision; but I leave it as is, since I got my score with albumentations.
+"""
+from torch.utils.data import DataLoader, Dataset
 from pathlib import Path
 import torch
-from torchvision.transforms import transforms as TF
 from PIL import Image
 import numpy as np
 import albumentations as A
@@ -14,13 +21,13 @@ class PreprocessedImageDataset(Dataset):
     def __init__(self, root, uses: int = 1):
         super().__init__()
 
-        self.uses = uses
-        self.paths = sorted(self.image_paths(Path(root)))
+        self.uses = uses  # how often 1 image in train set is reused in dataset
+        self.paths = sorted(self.image_paths(Path(root)))  # get paths
         self.transforms = A.Compose([
             A.RandomResizedCrop(height=90, width=90),
-            A.Flip(),
+            A.Flip(),  # vertical or horizontal
             A.RandomBrightnessContrast(p=0.2),
-            A.Normalize([0.48645], [0.2054]),
+            A.Normalize([0.48645], [0.2054]),  # pre-computed on train set using utils.Normalize()
             ToTensorV2()
         ])
 
@@ -44,7 +51,7 @@ class PreprocessedImageDataset(Dataset):
 
 def crop(image_array: torch.Tensor, border_x: tuple, border_y: tuple):
     """
-    essentially ex4 without error handling and with tensors
+    essentially ex4 without error handling and tensors
     """
     input_array = image_array.clone()  # create copy of image
     # set values out of border to 0
@@ -85,8 +92,16 @@ def GetInOut(image, border_x=None, border_y=None):
 
 
 def train_test_split(dataset: Dataset, train_size: float = 0.7482291345857714,
-                     val_size: float = 0.12588543270711428, test_size: float = 0.12588543270711428, seed: int = 0):
-    torch.manual_seed(seed)
+                     val_size: float = 0.12588543270711428, seed: int = 0):
+    """
+    get splits and Subsets of ImageDataset
+    :param dataset: dataset to be split
+    :param train_size: how many % of images are in the train set. Default value corresponds to folders [0, 5]
+    :param val_size: how many % of images are in the val and test set. Default value corresponds to folders [6] and [7]
+    :param seed: for reproducibility.
+    :return: Subsets given the splits.
+    """
+    torch.manual_seed(seed)  # make reproducible
     # use indices from splits
     train = torch.utils.data.Subset(dataset, indices=np.arange(int(len(dataset) * train_size)))
     val = torch.utils.data.Subset(dataset, indices=np.arange(int(len(dataset) * train_size),
@@ -97,23 +112,17 @@ def train_test_split(dataset: Dataset, train_size: float = 0.7482291345857714,
 
 
 def image_collate_fn(image_batch: list, n_feature_channels: int = 1):
-    #
-    # Handle sequences
-    #
-    # Get sequence entries, which are at index 0 in each sample tuple
     images = [sample for sample in image_batch]
     # Get the maximum number of height and width of image
     max_X = np.max([image[0][0].shape[0] for image in images])
     max_Y = np.max([image[0][0].shape[1] for image in images])
-    max_target = np.max([image[2].shape for image in images])
-    # Allocate a tensor that can fit all padded sequences
+    # Allocate tensors that can fit all images
     stacked_images_input = torch.zeros(size=(len(images), n_feature_channels,
                                              max_X, max_Y), dtype=torch.float32)
     stacked_images_mask = stacked_images_input.clone()
-    # only if all targets should have equal size:
-    # stacked_images_target = torch.zeros(size=(len(images), n_feature_channels, max_target), dtype=torch.float32)
-    stacked_images_target = []  #
-    # Write the sequences into the tensor stacked_sequences
+    stacked_images_target = []
+
+    # Write the sequences into the stacked_images_* tensors
     for i, image in enumerate(images):
         stacked_images_input[i, 0, :image[0][0][i].shape.numel(), :image[1][0][i].shape.numel()] = image[0]
         stacked_images_mask[i, 0, :image[1][0][i].shape.numel(), :image[1][0][i].shape.numel()] = image[1]
