@@ -9,7 +9,7 @@ from segmentation.models import all_models
 
 class Identity(torch.nn.Module):
     def __init__(self):
-        super(Identity, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         return x
@@ -17,17 +17,25 @@ class Identity(torch.nn.Module):
 
 class SimpleCNN(torch.nn.Module):
     def __init__(self, n_in_channels: int = 2, n_hidden_layers: int = 3, n_kernels: int = 32, kernel_size: int = 7):
-        super(SimpleCNN, self).__init__()
+        super().__init__()
 
         cnn = []
-        for i in range(n_hidden_layers):
-            cnn.append(torch.nn.Conv2d(in_channels=n_in_channels, out_channels=n_kernels, kernel_size=kernel_size,
-                                       bias=True, padding=int(kernel_size / 2)))
+        for _ in range(n_hidden_layers):
+            cnn.append(
+                torch.nn.Conv2d(
+                    in_channels=n_in_channels,
+                    out_channels=n_kernels,
+                    kernel_size=kernel_size,
+                    bias=True,
+                    padding=int(kernel_size / 2),
+                )
+            )
             cnn.append(torch.nn.ReLU())
             n_in_channels = n_kernels
         self.hidden_layers = torch.nn.Sequential(*cnn)
-        self.output_layer = torch.nn.Conv2d(in_channels=n_in_channels, out_channels=1,
-                                            kernel_size=kernel_size, bias=True, padding=int(kernel_size / 2))
+        self.output_layer = torch.nn.Conv2d(
+            in_channels=n_in_channels, out_channels=1, kernel_size=kernel_size, bias=True, padding=int(kernel_size / 2)
+        )
 
     def forward(self, x):
         cnn_out = self.hidden_layers(x)  # apply hidden layers (N, n_in_channels, X, Y) -> (N, n_kernels, X, Y)
@@ -51,17 +59,19 @@ class ResCNN(torch.nn.Module):
         kernel_size: int
             Number of features in output tensor
         """
-        super(ResCNN, self).__init__()
+        super().__init__()
 
         super().__init__()
         layers = []
         n_concat_channels = n_input_channels
         for i in range(n_hidden_layers):
             # Add a CNN layer
-            layer = torch.nn.Conv2d(in_channels=n_concat_channels,
-                                    out_channels=n_kernels,
-                                    kernel_size=kernel_size,
-                                    padding=int(kernel_size / 2))
+            layer = torch.nn.Conv2d(
+                in_channels=n_concat_channels,
+                out_channels=n_kernels,
+                kernel_size=kernel_size,
+                padding=int(kernel_size / 2),
+            )
             layers.append(layer)
             self.add_module(f"conv_{i:03d}", layer)
             # Prepare for concatenated input
@@ -104,10 +114,11 @@ class ResCNN(torch.nn.Module):
 
 class FCN_ResNet50(torch.nn.Module):
     def __init__(self):
-        super(FCN_ResNet50, self).__init__()
+        super().__init__()
         self.model = torchvision.models.segmentation.fcn_resnet50(pretrained=False, progress=True, num_classes=1)
-        self.model.backbone.conv1 = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3),
-                                                    bias=False)  # TODO: get rid of this?
+        self.model.backbone.conv1 = torch.nn.Conv2d(
+            2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+        )
         # model.classifier = Identity()
         self.model.classifier[4] = torch.nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1))
 
@@ -117,10 +128,9 @@ class FCN_ResNet50(torch.nn.Module):
 
 class fcn8_resnet34(torch.nn.Module):
     def __init__(self, batch_size, n_classes: int = 1):
-        super(fcn8_resnet34, self).__init__()
-        self.model = all_models.model_from_name['fcn32_resnet50'](n_classes, batch_size)
-        self.model.features[0] = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3),
-                                                 bias=False)
+        super().__init__()
+        self.model = all_models.model_from_name["fcn32_resnet50"](n_classes, batch_size)
+        self.model.features[0] = torch.nn.Conv2d(2, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
         self.model.classifier[1] = Identity()
 
     def get(self):
@@ -129,7 +139,7 @@ class fcn8_resnet34(torch.nn.Module):
 
 class pretrained_resnet(torch.nn.Module):
     def __init__(self):
-        super(pretrained_resnet, self).__init__()
+        super().__init__()
         self.arch = torchvision.models.segmentation.fcn_resnet50(pretrained=True)
         self.arch.classifier[4] = torch.nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1))
         self.arch.aux_classifier = Identity()

@@ -4,9 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 
-def _eval(loader: DataLoader, model: nn.Module,
-          optimizer=None, scheduler=False,
-          concat=True, stack=False) -> float:
+def _eval(loader: DataLoader, model: nn.Module, optimizer=None, scheduler=None, concat=True, stack=False) -> float:
     """
     General function used to train model and check its performance on a given DataLoader.
     :param loader: DataLoader instance
@@ -37,14 +35,17 @@ def _eval(loader: DataLoader, model: nn.Module,
         with compute_grad:
             output = model(concat_input)  # get model output
             if len(output) == 1 or len(output) == 2:  # get proper output from PyTorch model zoo models
-                output = output['out']
+                output = output["out"]
             # get output from borders only
             predictions = [output[i, 0][mask[i, 0]] for i in range(len(output))]
 
             # compute loss
             losses = torch.stack(
-                [mse_loss(prediction, target.to(device=device).view(-1))
-                 for prediction, target in zip(predictions, targets)])
+                [
+                    mse_loss(prediction, target.to(device=device).view(-1))
+                    for prediction, target in zip(predictions, targets)
+                ]
+            )
             loss = losses.sum()  # get scalar
 
             # change weights
@@ -53,7 +54,7 @@ def _eval(loader: DataLoader, model: nn.Module,
                 loss.backward()
                 optimizer.step()
                 # change LR
-                if scheduler:
+                if scheduler is not None:
                     scheduler.step()
             total_loss += loss.detach().cpu().item()  # finally, accumulate losses
     return total_loss / (len(loader) * loader.batch_size)  # also normalize by batch size to be more comparable
